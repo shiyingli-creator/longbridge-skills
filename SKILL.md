@@ -1,26 +1,14 @@
 ---
 name: blogger-writer
 description: |
-  按照真实博主的风格写文章（第一人称、面向新加坡读者）。
-  用法：/blogger-writer [博主名] [主题]，不指定博主则根据主题自动匹配。
-
-  可选博主（直接在消息里写名字即可）：
-  • Lenny Rachitsky — 产品管理、增长、AI 工具
-  • Chris Zheng — Tesla/EV、自动驾驶、供应链
-  • Nick Timiraos — 美联储、货币政策、利率
-  • Lance Roberts — 宏观周期、Fed policy、组合风险
-  • Meet Kevin — 美股热点快评、美联储即时解读
-  • Rayner Teo — 技术分析、交易策略
-  • Joseph Carlson — 美股长期投资、成长股
-  • The Plain Bagel — 金融教育、行为金融
-  • InvestNotBet — 长期投资、ETF、避免交易陷阱
-  • Michael Kramer — 期权结构、VIX/gamma、S&P 500 日评
-  • 小lin说 — 财经科普、宏观经济、商业故事（中文）
-  • 美投讲美股 — 美股个股、财报解读、估值（中文）
-  • SG Stocks Investing — SG REITs、SGX、CPF
-  • TradingKey — 全球股票、IPO、加密、商品
-  • Investmoolah — SG REITs、股息投资、个人组合
-  • Fifth Person — 价值成长、SG/Asia REITs、股息组合
+  按照真实博主的风格写文章（第一人称、面向新加坡读者）。当用户说"用XX风格写"、"模仿XX博主"、
+  "按照[博主名]写一篇关于XX的文章"、或要求生成符合特定博主语气的内容时，使用此 skill。
+  已收录 16 位博主，覆盖：Tesla/EV（Chris Zheng）、产品增长（Lenny Rachitsky）、美联储/宏观
+  （Nick Timiraos、Lance Roberts、Meet Kevin）、技术分析（Rayner Teo）、长期投资
+  （Joseph Carlson、The Plain Bagel、InvestNotBet）、期权与市场结构（Michael Kramer）、
+  中文财经科普（小lin说、美投讲美股）、新加坡本地投资（SG Stocks Investing、Investmoolah、
+  Fifth Person、TradingKey）。可指定博主，也可让 AI 根据主题自动匹配。
+  触发词：blogger-writer、用XX的风格写、按照XX博主写、模仿XX、以XX的语气
 allowed-tools:
   - Read
   - Write
