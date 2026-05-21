@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Longbridge Post Extractor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 28px 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5; color: #1a1a2e; font-size: 14px;
+    }
+    .card {
+      max-width: 1100px; margin: 0 auto;
+      background: #fff; border-radius: 12px; padding: 28px 32px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.05);
+    }
+    h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+    .subtitle { color: #888; font-size: 13px; margin: 0 0 22px; }
+
+    /* tabs */
+    .tabs { display: flex; border-bottom: 2px solid #e8eaed; margin-bottom: 20px; }
+    .tab { padding: 8px 18px; font-size: 13px; font-weight: 500; border: none; background: none; cursor: pointer; color: #888; border-bottom: 2.5px solid transparent; margin-bottom: -2px; transition: color .15s, border-color .15s; }
+    .tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* form */
+    .field-label { display: block; font-size: 13px; font-weight: 500; color: #555; margin-bottom: 5px; }
+    textarea, input[type="text"] { display: block; width: 100%; padding: 9px 12px; border: 1.5px solid #dde1e8; border-radius: 8px; font-family: 'SF Mono','Fira Code',monospace; font-size: 12.5px; line-height: 1.7; outline: none; transition: border-color .15s; color: #333; background: #fff; }
+    textarea { resize: vertical; }
+    textarea:focus, input[type="text"]:focus { border-color: #4a90e2; }
+
+    /* buttons */
+    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 18px; border: none; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; transition: filter .15s, transform .1s; white-space: nowrap; text-decoration: none; }
+    .btn:hover { filter: brightness(.91); }
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; filter: none; transform: none; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-indigo  { background: #6366f1; color: #fff; }
+    .btn-green   { background: #16a34a; color: #fff; }
+    .actions { margin-top: 12px; display: flex; align-items: center; gap: 10px; }
+
+    /* bookmarklet */
+    .bm-hero { background: linear-gradient(135deg,#1e3a8a,#2563eb); border-radius: 10px; padding: 20px 24px; color: #fff; margin-bottom: 18px; }
+    .bm-hero h2 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+    .bm-hero p  { margin: 0 0 16px; font-size: 12.5px; opacity: .85; line-height: 1.6; }
+    .bm-drag-area { background: rgba(255,255,255,.12); border: 2px dashed rgba(255,255,255,.4); border-radius: 8px; padding: 14px 18px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    #bookmarkletLink { display: inline-block; background: #fff; color: #1d4ed8; font-weight: 700; font-size: 14px; padding: 9px 18px; border-radius: 8px; text-decoration: none; cursor: grab; box-shadow: 0 2px 8px rgba(0,0,0,0.2); white-space: nowrap; user-select: none; }
+    .bm-drag-hint { font-size: 12px; opacity: .75; }
+    .steps-box { background: #f8f9fb; border: 1px solid #e8eaed; border-radius: 8px; padding: 12px 16px; font-size: 12.5px; color: #555; line-height: 2; }
+    .step-num { display: inline-block; width: 18px; height: 18px; line-height: 18px; text-align: center; background: #2563eb; color: #fff; border-radius: 50%; font-size: 10px; font-weight: 700; margin-right: 6px; }
+    kbd { display: inline-block; background: #e8eaed; color: #333; border-radius: 4px; padding: 1px 5px; font-size: 11px; font-family: monospace; border-bottom: 2px solid #ccc; }
+    .hint-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 9px 13px; font-size: 12.5px; color: #92400e; margin-bottom: 13px; }
+
+    /* log */
+    .log { margin-top: 14px; padding: 9px 13px; background: #f8f9fb; border-radius: 8px; border: 1px solid #e8eaed; font-family: monospace; font-size: 12px; line-height: 1.75; max-height: 130px; overflow-y: auto; display: none; }
+    .log.open { display: block; }
+    .log-info { color: #555; } .log-ok { color: #16a34a; } .log-err { color: #dc2626; }
+
+    /* divider */
+    .section-divider { border: none; border-top: 1.5px solid #f0f2f5; margin: 24px 0; }
+
+    /* results */
+    .results-section { display: none; }
+    .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .results-title { font-size: 14px; font-weight: 600; color: #333; }
+    .copy-feedback { font-size: 12px; color: #16a34a; font-weight: 500; }
+    .table-wrap { overflow-x: auto; border: 1px solid #e8eaed; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { padding: 9px 14px; text-align: left; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #888; background: #fafbfd; border-bottom: 1px solid #e8eaed; white-space: nowrap; }
+    tbody td { padding: 9px 14px; border-bottom: 1px solid #f2f4f7; font-size: 13px; color: #333; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #fafbfd; }
+    .td-num  { color: #bbb; text-align: right; width: 40px; }
+    .td-mono { font-family: monospace; font-size: 12px; color: #555; }
+    .td-posts { font-family: monospace; font-size: 11.5px; color: #444; line-height: 1.7; white-space: nowrap; }
+    .td-amount { font-weight: 600; text-align: center; }
+    .td-deep   { color: #1d4ed8; }
+    .td-basic  { color: #0369a1; }
+    .td-pending { color: #15803d; font-weight: 700; }
+    .td-note   { font-size: 12px; color: #dc2626; }
+    .dis-input { width: 64px; padding: 4px 7px; border: 1.5px solid #dde1e8; border-radius: 5px; font-size: 13px; text-align: center; outline: none; transition: border-color .15s; }
+    .dis-input:focus { border-color: #4a90e2; }
+    .copy-row { margin-top: 12px; display: flex; align-items: center; gap: 10px; }
+    .copy-hint { font-size: 12px; color: #aaa; }
+
+    /* raw toggle */
+    .raw-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; cursor: pointer; font-size: 12.5px; color: #666; }
+    .raw-toggle:hover { color: #333; }
+    .raw-panel { display: none; border: 1px solid #e8eaed; border-radius: 8px; margin-bottom: 14px; overflow: auto; max-height: 180px; }
+    .raw-panel.open { display: block; }
+    .raw-panel table { font-size: 12px; }
+    .raw-panel td, .raw-panel th { padding: 5px 10px; }
+    .raw-panel thead th { font-size: 11px; }
+    .btn-remove { background: none; border: none; cursor: pointer; color: #ddd; font-size: 14px; padding: 0 2px; transition: color .15s; }
+    .btn-remove:hover { color: #dc2626; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>Longbridge Post Extractor</h1>
+  <p class="subtitle">按用户汇总 · 深度 / 基础 自动分类 · 待发放金额自动计算</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('bm')">🔖 Bookmarklet <span style="font-size:11px;color:#16a34a;font-weight:600">推荐</span></button>
+    <button class="tab" onclick="switchTab('paste')">Paste Source</button>
+    <button class="tab" onclick="switchTab('auto')">Auto-fetch</button>
+  </div>
+
+  <!-- Bookmarklet -->
+  <div class="tab-panel active" id="panel-bm">
+    <div class="bm-hero">
+      <h2>一键提取书签工具</h2>
+      <p>安装后：在 Longbridge 帖子页面点击书签 → 右上角弹出面板，自动汇总深度/基础/待发放金额</p>
+      <div class="bm-drag-area">
+        <a id="bookmarkletLink" href="#" title="拖拽到书签栏">📊 LB Extractor</a>
+        <span class="bm-drag-hint">← 拖拽到浏览器书签栏安装</span>
+      </div>
+    </div>
+    <div class="steps-box">
+      <b>安装步骤（一次性）</b><br>
+      <span class="step-num">1</span> 显示书签栏：<kbd>Cmd+Shift+B</kbd>（Mac）/ <kbd>Ctrl+Shift+B</kbd>（Win）<br>
+      <span class="step-num">2</span> 把上方「📊 LB Extractor」按钮拖到书签栏，松手即完成<br>
+      <span class="step-num">3</span> 打开任意 Longbridge 帖子 → 点书签 → 右上角出现汇总面板<br>
+      <span class="step-num">4</span> 逐帖点击书签，数据自动累积；填写已发放金额后点「Copy as Table」
+    </div>
+  </div>
+
+  <!-- Paste Source -->
+  <div class="tab-panel" id="panel-paste">
+    <div class="hint-box"><b>查看源码：</b>在帖子页面<b>右键空白处</b> → 「查看页面源代码」，或地址栏 URL 前加 <kbd>view-source:</kbd></div>
+    <div class="steps-box" style="margin-bottom:12px">
+      <span class="step-num">1</span> 打开帖子 → 右键 → 查看页面源代码（新标签）<br>
+      <span class="step-num">2</span> <kbd>Cmd+A</kbd> 全选 → <kbd>Cmd+C</kbd> 复制 → 粘贴到下方 → Parse &amp; Add
+    </div>
+    <label class="field-label">帖子 URL</label>
+    <input type="text" id="pasteUrl" placeholder="https://longbridge.com/en/topics/100000000671762" style="margin-bottom:9px">
+    <label class="field-label">页面源代码</label>
+    <textarea id="pasteHtml" rows="5" placeholder="粘贴页面 HTML 源码..."></textarea>
+    <div class="actions">
+      <button class="btn btn-indigo" onclick="addManualEntry()">Parse &amp; Add</button>
+      <span id="manualMsg" style="font-size:12px;color:#888"></span>
+    </div>
+  </div>
+
+  <!-- Auto-fetch -->
+  <div class="tab-panel" id="panel-auto">
+    <div class="hint-box">通过第三方代理抓取，可能返回 403。若失败请改用「Bookmarklet」或「Paste Source」。</div>
+    <label class="field-label">Post URLs（每行一条）</label>
+    <textarea id="urlInput" rows="5" placeholder="https://longbridge.com/en/topics/100000000671762"></textarea>
+    <div class="actions">
+      <button class="btn btn-primary" id="autoBtn" onclick="runAutoExtract()">Extract</button>
+    </div>
+    <div class="log" id="autoLog"></div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- Results -->
+  <div class="results-section" id="resultsSection">
+    <!-- Raw posts collapsible -->
+    <div class="raw-toggle" onclick="toggleRaw()">
+      <span id="rawArrow">▶</span>
+      <span id="rawSummaryText">已收集 0 条帖子</span>
+      <span style="color:#aaa;font-size:11px">（点击展开明细）</span>
+    </div>
+    <div class="raw-panel" id="rawPanel">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Post ID</th><th>日期</th><th>User ID</th><th>昵称</th><th>字数</th><th>分类</th><th></th>
+        </tr></thead>
+        <tbody id="rawBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Aggregated table -->
+    <div class="results-header">
+      <span class="results-title" id="resultsTitle">汇总表</span>
+      <span class="copy-feedback" id="copyFeedback"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>序号</th>
+          <th>用户ID</th>
+          <th>用户昵称</th>
+          <th>深度（&gt;50字）</th>
+          <th>基础（20-50字）</th>
+          <th>待发放金额</th>
+          <th>已发放金额（累计）</th>
+          <th>备注</th>
+        </tr></thead>
+        <tbody id="aggrBody"></tbody>
+      </table>
+    </div>
+    <div class="copy-row">
+      <button class="btn btn-green" onclick="copyTable()">Copy as Table</button>
+      <span class="copy-hint">Tab 分隔 · 可直接粘贴进 Lark / Excel</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// BOOKMARKLET  (injected as javascript: href, runs on Longbridge page)
+// ══════════════════════════════════════════════════════════════════════════════
+const BOOKMARKLET_FN = function() {
+  'use strict';
+  var POSTS_KEY = 'lb_extractor_posts';
+  var DIS_KEY   = 'lb_extractor_dis';
+
+  // ── helpers ──
+  function bfsAuthor(root) {
+    var IK = ['memberId','member_id','userId','user_id','authorId','author_id','uid'];
+    var NK = ['nickname','nick_name','nickName','userName','user_name','displayName','display_name','screenName','name','alias','handle','memberName','member_name'];
+    var q = [root], seen = new WeakSet();
+    while (q.length) {
+      var n = q.shift();
+      if (!n || typeof n !== 'object' || seen.has(n)) continue;
+      seen.add(n);
+      if (!Array.isArray(n)) {
+        var ik = IK.filter(function(k){ return n[k]!=null&&n[k]!==''&&/^\d{5,11}$/.test(String(n[k])); })[0];
+        var nk = NK.filter(function(k){ return n[k]!=null&&typeof n[k]==='string'&&n[k].length>0&&n[k].length<80; })[0];
+        if (ik && nk) return { uid: String(n[ik]), name: String(n[nk]) };
+      }
+      Object.values(n).forEach(function(v){ if(v&&typeof v==='object') q.push(v); });
+    }
+    return null;
+  }
+  function countWords(t) {
+    // Split by whitespace; count tokens that contain at least one English letter
+    // "P/L" → 1 word,  "a" → 1 word,  "," alone → 0
+    if (!t) return 0;
+    return t.trim().split(/\s+/).filter(function(w){ return /[a-zA-Z]/.test(w); }).length;
+  }
+  // Extract plain text from content that may be HTML or rich-text JSON (Quill/ProseMirror/TipTap)
+  function getContentText(c) {
+    if (!c) return '';
+    var obj;
+    try { obj = JSON.parse(c); } catch(e) {
+      // Not JSON — treat as HTML string; strip @mention spans first
+      var d=document.createElement('div'); d.innerHTML=c;
+      d.querySelectorAll('[type="mention"],span.mention').forEach(function(el){el.remove();});
+      return d.textContent;
+    }
+    // Quill delta format: { ops: [{insert: "..."}, ...] }
+    if (obj && Array.isArray(obj.ops)) {
+      return obj.ops.map(function(op){ return typeof op.insert==='string'?op.insert:''; }).join('');
+    }
+    // ProseMirror / TipTap / generic rich-text: collect all string "text" and "insert" values
+    var texts=[];
+    function walkRT(n) {
+      if (!n||typeof n!=='object') return;
+      if (typeof n.text==='string') { texts.push(n.text); return; }
+      if (typeof n.insert==='string') { texts.push(n.insert); return; }
+      (Array.isArray(n)?n:Object.values(n)).forEach(function(v){ if(v&&typeof v==='object') walkRT(v); });
+    }
+    walkRT(obj);
+    return texts.length ? texts.join(' ') : '';
+  }
+  function fmtDate(val) {
+    if (!val) return '';
+    // "2026.05.20 18:06" or "2026-05-20" style visible text
+    var m = String(val).match(/\b20\d\d[.\/-](\d{1,2})[.\/-](\d{1,2})\b/);
+    if (m) return parseInt(m[1])+'.'+parseInt(m[2]);
+    // Unix timestamp (seconds or ms)
+    var ms = typeof val==='number' ? (val>1e11?val:val*1000) : NaN;
+    if (isNaN(ms)) ms = Date.parse(String(val));
+    if (isNaN(ms)||ms<1e12) return '';
+    var d = new Date(ms);
+    if (d.getFullYear()<2020||d.getFullYear()>2035) return '';
+    return (d.getMonth()+1)+'.'+d.getDate();
+  }
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function getPosts()    { try{return JSON.parse(localStorage.getItem(POSTS_KEY)||'[]');}catch(e){return[];} }
+  function savePosts(r)  { localStorage.setItem(POSTS_KEY, JSON.stringify(r)); }
+  function getDis()      { try{return JSON.parse(localStorage.getItem(DIS_KEY)||'{}');}catch(e){return {};} }
+  function saveDis(d)    { localStorage.setItem(DIS_KEY, JSON.stringify(d)); }
+
+  // ── extract current page ──
+  function extract() {
+    var url = location.href;
+    var postId = (url.match(/\/topics\/(\d+)/)||[])[1]||'';
+    var userId='', nickname='', wc=0, date='';
+    var ndEl = document.getElementById('__NEXT_DATA__');
+    if (ndEl) {
+      try {
+        var nd = JSON.parse(ndEl.textContent);
+        var pp = (nd.props||{}).pageProps||{};
+        var po = pp.topicDetail||pp.topic||pp.post||pp.article||pp.detail||null;
+        if (po) {
+          var ao = po.author||po.user||po.member||po;
+          var a = bfsAuthor(ao);
+          if (a) { userId=a.uid; nickname=a.name; }
+          var c = po.description_html||po.content||po.text||po.body||po.richContent||po.richText||'';
+          if (c) { wc=countWords(getContentText(c)); }
+          var DK=['createdAt','created_at','publishedAt','published_at','createTime','create_time','time','pubDate'];
+          for (var i=0;i<DK.length;i++) { var dv=po[DK[i]]; if(dv!=null){date=fmtDate(dv);if(date)break;} }
+        }
+        if (!userId) { var a2=bfsAuthor(nd); if(a2){userId=a2.uid;nickname=a2.name;} }
+      } catch(e) {}
+    }
+    var bhtml = document.body.innerHTML;
+    if (!userId) { var m=bhtml.match(/"(?:memberId|member_id|userId|user_id)"\s*:\s*"?(\d{5,11})"?/); if(m) userId=m[1]; }
+    if (!nickname) { var m=bhtml.match(/"(?:nickname|nick_name|nickName|userName|user_name|displayName|name|alias|handle)"\s*:\s*"([^"\\]{1,80})"/); if(m) nickname=m[1]; }
+    // DOM fallback
+    var lnk = document.querySelector('a[href*="/profiles/"]');
+    if (lnk) {
+      if (!userId) userId=(lnk.href.match(/\/profiles\/(\d+)/)||[])[1]||'';
+      if (!nickname) {
+        var cl=lnk.cloneNode(true); cl.querySelectorAll('img,svg,i,[aria-hidden]').forEach(function(x){x.remove();});
+        var raw=cl.textContent.trim().replace(/\s+/g,' ');
+        if (raw&&raw.length<80) nickname=raw;
+        if (!nickname) {
+          var par=lnk.parentElement;
+          for (var p=0;p<5&&par&&!nickname;p++,par=par.parentElement) {
+            var ne=par.querySelector('[class*="nick"],[class*="name"],[class*="user"],[class*="author"]');
+            if (ne&&ne!==lnk){var t=ne.textContent.trim().replace(/\s+/g,' ');if(t&&t.length<80)nickname=t;}
+          }
+        }
+      }
+    }
+    if (!nickname && userId) {
+      var idx=bhtml.indexOf('"'+userId+'"'); if(idx<0)idx=bhtml.indexOf(userId);
+      if(idx>=0){var chunk=bhtml.substring(Math.max(0,idx-300),idx+600);var nm2=chunk.match(/"(?:name|nickname|alias|handle|displayName|screenName|userName)[^"]*"\s*:\s*"([^"\\]{1,80})"/i);if(nm2)nickname=nm2[1];}
+    }
+    if (!wc) {
+      var bc=document.body.cloneNode(true);
+      ['nav','header','footer','script','style','aside',
+       '[class*="comment"]','[class*="sidebar"]','[class*="right-col"]','[class*="right_col"]',
+       '[class*="recommend"]','[class*="related"]','[class*="trending"]','[class*="hot-"]'
+      ].forEach(function(s){bc.querySelectorAll(s).forEach(function(e){e.remove();});});
+      var el=bc.querySelector(
+        '[class*="topic-content"],[class*="post-content"],[class*="rich-text"],' +
+        '[class*="topic-detail"],[class*="post-body"],[class*="article-content"],' +
+        '[class*="content-body"],article,main'
+      )||bc;
+      wc=countWords((el||bc).textContent||'');
+    }
+    // ── Date: scan visible text nodes for "2026.05.20" pattern ──
+    if (!date) {
+      var tw=document.createTreeWalker(document.body,4/*SHOW_TEXT*/);
+      var tn;
+      while(!date&&(tn=tw.nextNode())){
+        var dm=tn.textContent.match(/\b20\d\d[.\/-](\d{1,2})[.\/-](\d{1,2})\b/);
+        if(dm) date=parseInt(dm[1])+'.'+parseInt(dm[2]);
+      }
+    }
+    if (!date) {
+      var te=document.querySelector('meta[property="article:published_time"],meta[name="publish_date"],time[datetime]');
+      if(te) date=fmtDate(te.getAttribute('content')||te.getAttribute('datetime'));
+    }
+    return { postId:postId, userId:userId, nickname:nickname, wc:wc, date:date };
+  }
+
+  // ── aggregate ──
+  function sortLabels(arr) {
+    return arr.slice().sort(function(a,b){
+      var ma=a.match(/^(\d+)\.(\d+)/), mb=b.match(/^(\d+)\.(\d+)/);
+      if(!ma&&!mb)return 0; if(!ma)return 1; if(!mb)return -1;
+      return (parseInt(ma[1])*100+parseInt(ma[2]))-(parseInt(mb[1])*100+parseInt(mb[2]));
+    });
+  }
+  function aggregate(posts, dis) {
+    var map={}, order=[];
+    posts.forEach(function(p){
+      var k=p.userId||p.postId;
+      if(!map[k]){map[k]={userId:p.userId,nickname:p.nickname||'',deep:[],basic:[],low:[]};order.push(k);}
+      var e=map[k]; if(!e.nickname&&p.nickname)e.nickname=p.nickname;
+      var label=(p.date?p.date+' - ':'')+p.postId;
+      if(p.wc>50)e.deep.push(label);
+      else if(p.wc>20)e.basic.push(label);
+      else e.low.push(label);
+    });
+    return order.map(function(k){
+      var u=map[k];
+      return Object.assign({},u,{deep:sortLabels(u.deep),basic:sortLabels(u.basic),disbursed:Number(dis[k]||0)});
+    });
+  }
+
+  // ── render panel ──
+  function render(panel) {
+    var posts=getPosts(), dis=getDis();
+    var aggr=aggregate(posts,dis);
+    var tr=aggr.map(function(u,i){
+      var should=u.deep.length*2+u.basic.length;
+      var pending=should-u.disbursed;
+      var notes=u.low.length>0?'字数不足20':'';
+      var deepHtml=u.deep.map(function(s){return '<div>'+esc(s)+'</div>';}).join('');
+      var basicHtml=u.basic.map(function(s){return '<div>'+esc(s)+'</div>';}).join('');
+      return '<tr style="background:'+(i%2?'#f9fafb':'#fff')+'">'
+        +'<td style="padding:7px 10px;color:#bbb;font-size:12px;text-align:right">'+(i+1)+'</td>'
+        +'<td style="padding:7px 10px;font-family:monospace;font-size:11.5px;color:#555">'+esc(u.userId)+'</td>'
+        +'<td style="padding:7px 10px;font-size:12.5px">'+esc(u.nickname)+'</td>'
+        +'<td style="padding:7px 10px;font-family:monospace;font-size:11px;color:#1d4ed8;line-height:1.6">'+(deepHtml||'<span style="color:#ccc">—</span>')+'</td>'
+        +'<td style="padding:7px 10px;font-family:monospace;font-size:11px;color:#0369a1;line-height:1.6">'+(basicHtml||'<span style="color:#ccc">—</span>')+'</td>'
+        +'<td style="padding:7px 10px;text-align:center;font-weight:700;color:#15803d">'+(pending>0?pending:'')+'</td>'
+        +'<td style="padding:7px 8px;text-align:center"><input type="number" min="0" value="'+u.disbursed+'" data-uid="'+esc(u.userId)+'" style="width:56px;padding:3px 6px;border:1.5px solid #dde1e8;border-radius:5px;font-size:12.5px;text-align:center"></td>'
+        +'<td style="padding:7px 10px;font-size:12px;color:#dc2626">'+esc(notes)+'</td>'
+        +'</tr>';
+    }).join('');
+
+    panel.innerHTML =
+      '<div style="padding:11px 15px;background:#1e3a8a;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:space-between">'
+        +'<span style="color:#fff;font-weight:600;font-size:13.5px">📊 LB Extractor <span style="opacity:.6;font-size:11.5px;font-weight:400">'+posts.length+' 条 / '+aggr.length+' 人</span></span>'
+        +'<div style="display:flex;gap:6px">'
+          +'<button id="__lb_clr" style="background:rgba(255,255,255,.2);border:none;color:#fff;cursor:pointer;border-radius:5px;padding:3px 10px;font-size:11.5px">清空</button>'
+          +'<button id="__lb_x"   style="background:rgba(255,255,255,.2);border:none;color:#fff;cursor:pointer;border-radius:5px;padding:3px 10px;font-size:11.5px">✕</button>'
+        +'</div>'
+      +'</div>'
+      +(aggr.length===0
+        ? '<p style="padding:20px;color:#aaa;text-align:center;font-size:13px">暂无数据，请在帖子页面点击书签。</p>'
+        : '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'
+            +'<thead><tr style="background:#f3f4f6">'
+              +'<th style="padding:6px 10px;font-size:10.5px;color:#9ca3af;font-weight:600;text-align:right;width:30px">#</th>'
+              +'<th style="padding:6px 10px;font-size:10.5px;color:#9ca3af;font-weight:600;text-align:left">用户ID</th>'
+              +'<th style="padding:6px 10px;font-size:10.5px;color:#9ca3af;font-weight:600;text-align:left">昵称</th>'
+              +'<th style="padding:6px 10px;font-size:10.5px;color:#1d4ed8;font-weight:600;text-align:left">深度 (&gt;50字)</th>'
+              +'<th style="padding:6px 10px;font-size:10.5px;color:#0369a1;font-weight:600;text-align:left">基础 (20-50字)</th>'
+              +'<th style="padding:6px 10px;font-size:10.5px;color:#15803d;font-weight:600;text-align:center">待发放</th>'
+              +'<th style="padding:6px 10px;font-size:10.5px;color:#9ca3af;font-weight:600;text-align:center">已发放(累计)</th>'
+              +'<th style="padding:6px 10px;font-size:10.5px;color:#9ca3af;font-weight:600;text-align:left">备注</th>'
+            +'</tr></thead>'
+            +'<tbody>'+tr+'</tbody>'
+          +'</table></div>'
+      )
+      +'<div style="padding:9px 14px 12px;display:flex;gap:8px;align-items:center">'
+        +'<button id="__lb_copy" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer">Copy as Table</button>'
+        +'<span id="__lb_fb" style="font-size:12px;color:#16a34a;font-weight:500"></span>'
+      +'</div>';
+
+    // bind inputs (live update pending cell)
+    panel.querySelectorAll('input[data-uid]').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        var d=getDis(); d[inp.dataset.uid]=Number(inp.value)||0; saveDis(d);
+        // update corresponding pending cell
+        var rows=panel.querySelectorAll('tbody tr');
+        var aggr2=aggregate(getPosts(),getDis());
+        aggr2.forEach(function(u,i){
+          if(u.userId===inp.dataset.uid){
+            var tds=rows[i]&&rows[i].querySelectorAll('td');
+            if(tds&&tds[5]){var p=u.deep.length*2+u.basic.length-(Number(inp.value)||0);tds[5].textContent=p>0?p:'';}
+          }
+        });
+      });
+    });
+    document.getElementById('__lb_x').onclick=function(){panel.remove();};
+    document.getElementById('__lb_clr').onclick=function(){if(confirm('清空所有数据？')){localStorage.removeItem(POSTS_KEY);localStorage.removeItem(DIS_KEY);render(panel);}};
+    document.getElementById('__lb_copy').onclick=function(){
+      var ag=aggregate(getPosts(),getDis());
+      function bc(s){return String(s||'').replace(/[\t\r\n]/g,' ').trim();}
+      var H=['序号','用户ID','用户昵称','深度','基础','待发放金额','已发放金额（累计）','备注'];
+      var htm='<table><thead><tr>'+H.map(function(h){return '<th>'+h+'</th>';}).join('')+'</tr></thead><tbody>';
+      var lines=[H.join('\t')];
+      ag.forEach(function(u,i){
+        var should=u.deep.length*2+u.basic.length, pending=should-u.disbursed;
+        var pv=pending>0?pending:'', dv=u.disbursed||'', note=u.low.length>0?'字数不足20':'';
+        htm+='<tr><td>'+(i+1)+'</td><td>'+esc(u.userId)+'</td><td>'+esc(u.nickname)+'</td>'
+          +'<td>'+u.deep.map(esc).join('<br>')+'</td><td>'+u.basic.map(esc).join('<br>')+'</td>'
+          +'<td>'+pv+'</td><td>'+dv+'</td><td>'+esc(note)+'</td></tr>';
+        lines.push([i+1,bc(u.userId),bc(u.nickname),u.deep.map(bc).join('; '),u.basic.map(bc).join('; '),pv,dv,note].join('\t'));
+      });
+      htm+='</tbody></table>';
+      var txt=lines.join('\r\n');
+      var fb=document.getElementById('__lb_fb');
+      var done=function(){if(fb){fb.textContent='✓ Copied!';setTimeout(function(){fb.textContent='';},2000);}};
+      if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){
+        navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([htm],{type:'text/html'}),'text/plain':new Blob([txt],{type:'text/plain'})})]).then(done).catch(function(){navigator.clipboard.writeText(txt).then(done).catch(function(){done();});});
+      } else if(navigator.clipboard){navigator.clipboard.writeText(txt).then(done);}
+      else{var ta=document.createElement('textarea');ta.value=txt;ta.style='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);done();}
+    };
+  }
+
+  // ── main ──
+  var existing=document.getElementById('__lb_panel');
+  if(existing){existing.remove();return;}
+
+  var d=extract();
+  var posts=getPosts();
+  var idx=posts.findIndex(function(p){return p.postId===d.postId;});
+  if(idx>=0)posts[idx]=d; else posts.push(d);
+  savePosts(posts);
+
+  var panel=document.createElement('div');
+  panel.id='__lb_panel';
+  panel.style.cssText='position:fixed;top:12px;right:12px;z-index:2147483647;width:760px;max-width:calc(100vw - 24px);max-height:82vh;overflow-y:auto;background:#fff;border-radius:10px;box-shadow:0 4px 28px rgba(0,0,0,0.22);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13px;color:#333;';
+  document.body.appendChild(panel);
+  render(panel);
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MAIN TOOL SCRIPT
+// ══════════════════════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', function() {
+  var code = '(' + BOOKMARKLET_FN.toString() + ')();';
+  document.getElementById('bookmarkletLink').href = 'javascript:' + encodeURIComponent(code);
+});
+
+function switchTab(name) {
+  var names = ['bm','paste','auto'];
+  document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.toggle('active', names[i]===name); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.toggle('active', p.id==='panel-'+name); });
+}
+
+// ── State ──
+var rawPosts = [];      // [{postId, userId, nickname, wordCount, date}]
+var disbursedMap = {};  // userId -> number
+
+// ── Shared helpers ──
+function bfsAuthor(root) {
+  var IK = ['memberId','member_id','userId','user_id','authorId','author_id','uid'];
+  var NK = ['nickname','nick_name','nickName','userName','user_name','displayName','display_name','screenName','name','alias','handle','memberName','member_name'];
+  var q=[root], seen=new WeakSet();
+  while(q.length){
+    var n=q.shift();
+    if(!n||typeof n!=='object'||seen.has(n))continue;
+    seen.add(n);
+    if(!Array.isArray(n)){
+      var ik=IK.find(function(k){return n[k]!=null&&n[k]!==''&&/^\d{5,11}$/.test(String(n[k]));});
+      var nk=NK.find(function(k){return n[k]!=null&&typeof n[k]==='string'&&n[k].length>0&&n[k].length<80;});
+      if(ik&&nk) return {userId:String(n[ik]),nickname:String(n[nk])};
+    }
+    Object.values(n).forEach(function(v){if(v&&typeof v==='object')q.push(v);});
+  }
+  return null;
+}
+function bfsContent(root) {
+  var CK=['description_html','content','text','body','description','postContent','richText'];
+  var q=[root],seen=new WeakSet();
+  while(q.length){var n=q.shift();if(!n||typeof n!=='object'||seen.has(n))continue;seen.add(n);if(!Array.isArray(n)){for(var i=0;i<CK.length;i++)if(typeof n[CK[i]]==='string'&&n[CK[i]].length>30)return n[CK[i]];}Object.values(n).forEach(function(v){if(v&&typeof v==='object')q.push(v);});}
+  return null;
+}
+function countWords(t){
+  // Split by whitespace; count tokens that contain at least one English letter
+  // "P/L" → 1 word,  "a" → 1 word,  "," alone → 0
+  if (!t) return 0;
+  return t.trim().split(/\s+/).filter(function(w){ return /[a-zA-Z]/.test(w); }).length;
+}
+// Extract plain text from content that may be HTML or rich-text JSON (Quill/ProseMirror/TipTap)
+function getContentText(c) {
+  if (!c) return '';
+  var obj;
+  try { obj = JSON.parse(c); } catch(e) {
+    var d=document.createElement('div'); d.innerHTML=c;
+    d.querySelectorAll('[type="mention"],span.mention').forEach(function(el){el.remove();});
+    return d.textContent;
+  }
+  // Quill delta: { ops: [{insert: "..."}] }
+  if (obj && Array.isArray(obj.ops)) {
+    return obj.ops.map(function(op){ return typeof op.insert==='string'?op.insert:''; }).join('');
+  }
+  // ProseMirror / TipTap / generic: collect all "text" or "insert" string leaves
+  var texts=[];
+  function walkRT(n) {
+    if (!n||typeof n!=='object') return;
+    if (typeof n.text==='string') { texts.push(n.text); return; }
+    if (typeof n.insert==='string') { texts.push(n.insert); return; }
+    (Array.isArray(n)?n:Object.values(n)).forEach(function(v){ if(v&&typeof v==='object') walkRT(v); });
+  }
+  walkRT(obj);
+  return texts.length ? texts.join(' ') : '';
+}
+function fmtDate(val) {
+  if (!val) return '';
+  var m = String(val).match(/\b20\d\d[.\/-](\d{1,2})[.\/-](\d{1,2})\b/);
+  if (m) return parseInt(m[1])+'.'+parseInt(m[2]);
+  var ms = typeof val==='number' ? (val>1e11?val:val*1000) : NaN;
+  if (isNaN(ms)) ms = Date.parse(String(val));
+  if (isNaN(ms)||ms<1e12) return '';
+  var d = new Date(ms);
+  if (d.getFullYear()<2020||d.getFullYear()>2035) return '';
+  return (d.getMonth()+1)+'.'+d.getDate();
+}
+function extractPostId(url){ var m=url.match(/\/topics\/(\d+)/); return m?m[1]:''; }
+
+function extractData(html, url) {
+  var doc = new DOMParser().parseFromString(html,'text/html');
+  var postId=extractPostId(url);
+  var userId='',nickname='',wc=0,pc='',date='';
+
+  var ndEl=doc.getElementById('__NEXT_DATA__');
+  if(ndEl){
+    try{
+      var nd=JSON.parse(ndEl.textContent);
+      var pp=(nd.props||{}).pageProps||{};
+      var po=pp.topicDetail||pp.topic||pp.post||pp.article||pp.detail||null;
+      if(po){
+        var a=bfsAuthor(po.author||po.user||po.member||po);
+        if(a){userId=a.userId;nickname=a.nickname;}
+        pc=po.description_html||po.content||po.text||po.body||po.richContent||po.richText||'';
+        var DK=['createdAt','created_at','publishedAt','published_at','createTime','create_time','time','pubDate'];
+        for(var i=0;i<DK.length;i++){var dv=po[DK[i]];if(dv!=null){date=fmtDate(dv);if(date)break;}}
+      }
+      if(!userId){var a2=bfsAuthor(nd);if(a2){userId=a2.userId;nickname=a2.nickname;}}
+      if(!pc)pc=bfsContent(nd)||'';
+    }catch(e){}
+  }
+  if(!userId){var m=html.match(/"(?:memberId|member_id|userId|user_id)"\s*:\s*"?(\d{5,11})"?/);if(m)userId=m[1];}
+  if(!nickname){var m=html.match(/"(?:nickname|nick_name|nickName|userName|user_name|displayName|display_name|screenName|alias|handle|name)"\s*:\s*"([^"\\]{1,80})"/);if(m)nickname=m[1];}
+
+  // DOM fallback
+  var lnk=doc.querySelector('a[href*="/profiles/"]');
+  if(lnk){
+    if(!userId)userId=(lnk.getAttribute('href').match(/\/profiles\/(\d+)/)||[])[1]||'';
+    if(!nickname){
+      var cl=lnk.cloneNode(true);cl.querySelectorAll('img,svg,i,[aria-hidden]').forEach(function(x){x.remove();});
+      var raw=cl.textContent.trim().replace(/\s+/g,' ');
+      if(raw&&raw.length<80)nickname=raw;
+      if(!nickname){var par=lnk.parentElement;for(var p=0;p<5&&par&&!nickname;p++,par=par.parentElement){var ne=par.querySelector('[class*="nick"],[class*="name"],[class*="user"],[class*="author"]');if(ne&&ne!==lnk){var t=ne.textContent.trim().replace(/\s+/g,' ');if(t&&t.length<80)nickname=t;}}}
+    }
+  }
+  if(!nickname&&userId){var idx=html.indexOf('"'+userId+'"');if(idx<0)idx=html.indexOf(userId);if(idx>=0){var chunk=html.substring(Math.max(0,idx-300),idx+600);var nm2=chunk.match(/"(?:name|nickname|alias|handle|displayName|screenName|userName)[^"]*"\s*:\s*"([^"\\]{1,80})"/i);if(nm2)nickname=nm2[1];}}
+
+  if(pc){wc=countWords(getContentText(pc));}
+  else{
+    var bc=doc.body&&doc.body.cloneNode(true);
+    if(bc){
+      ['nav','header','footer','script','style','aside',
+       '[class*="comment"]','[class*="sidebar"]','[class*="right-col"]','[class*="right_col"]',
+       '[class*="recommend"]','[class*="related"]','[class*="trending"]','[class*="hot-"]'
+      ].forEach(function(s){bc.querySelectorAll(s).forEach(function(el){el.remove();});});
+      var el=bc.querySelector(
+        '[class*="topic-content"],[class*="post-content"],[class*="rich-text"],' +
+        '[class*="topic-detail"],[class*="post-body"],[class*="article-content"],' +
+        '[class*="content-body"],article,main'
+      )||bc;
+      wc=countWords((el||bc).textContent||'');
+    }
+  }
+  // Date: scan HTML text for visible "2026.05.20" pattern (most reliable)
+  if (!date) {
+    var dm=html.match(/\b20\d\d[.\/-](\d{1,2})[.\/-](\d{1,2})\b/);
+    if (dm) date=parseInt(dm[1])+'.'+parseInt(dm[2]);
+  }
+  if (!date) {
+    var te=doc.querySelector('meta[property="article:published_time"],meta[name="publish_date"],time[datetime]');
+    if(te) date=fmtDate(te.getAttribute('content')||te.getAttribute('datetime'));
+  }
+  return {postId:postId,userId:userId,nickname:nickname,wordCount:wc,date:date};
+}
+
+// ── Aggregate ──
+function sortLabels(arr) {
+  return arr.slice().sort(function(a,b){
+    var ma=a.match(/^(\d+)\.(\d+)/), mb=b.match(/^(\d+)\.(\d+)/);
+    if(!ma&&!mb)return 0; if(!ma)return 1; if(!mb)return -1;
+    return (parseInt(ma[1])*100+parseInt(ma[2]))-(parseInt(mb[1])*100+parseInt(mb[2]));
+  });
+}
+function aggregate() {
+  var map={}, order=[];
+  rawPosts.forEach(function(p){
+    var k=p.userId||('_'+p.postId);
+    if(!map[k]){map[k]={userId:p.userId,nickname:p.nickname||'',deep:[],basic:[],low:[]};order.push(k);}
+    var e=map[k]; if(!e.nickname&&p.nickname)e.nickname=p.nickname;
+    var label=(p.date?p.date+' - ':'')+p.postId;
+    if(p.wordCount>50)e.deep.push(label);
+    else if(p.wordCount>20)e.basic.push(label);
+    else e.low.push(label);
+  });
+  return order.map(function(k){
+    var u=map[k];
+    return Object.assign({},u,{deep:sortLabels(u.deep),basic:sortLabels(u.basic),disbursed:Number(disbursedMap[k]||0)});
+  });
+}
+
+// ── Render ──
+function renderAll() {
+  if(rawPosts.length===0){document.getElementById('resultsSection').style.display='none';return;}
+  document.getElementById('resultsSection').style.display='block';
+
+  // raw summary
+  document.getElementById('rawSummaryText').textContent='已收集 '+rawPosts.length+' 条帖子（点击展开明细）';
+
+  // raw table
+  var rawHtml=rawPosts.map(function(p,i){
+    var cat=p.wordCount>50?'深度':p.wordCount>20?'基础':'不足20字';
+    var catColor=p.wordCount>50?'#1d4ed8':p.wordCount>20?'#0369a1':'#dc2626';
+    return '<tr>'
+      +'<td style="color:#bbb;text-align:right">'+(i+1)+'</td>'
+      +'<td class="td-mono">'+esc(p.postId)+'</td>'
+      +'<td style="font-size:12px">'+esc(p.date||'')+'</td>'
+      +'<td class="td-mono">'+esc(p.userId)+'</td>'
+      +'<td>'+esc(p.nickname)+'</td>'
+      +'<td style="text-align:right">'+p.wordCount+'</td>'
+      +'<td style="color:'+catColor+';font-size:12px;font-weight:600">'+cat+'</td>'
+      +'<td><button class="btn-remove" onclick="removePost('+i+')" title="Remove">×</button></td>'
+      +'</tr>';
+  }).join('');
+  document.getElementById('rawBody').innerHTML=rawHtml;
+
+  // aggregated table
+  var aggr=aggregate();
+  document.getElementById('resultsTitle').textContent='汇总表（'+aggr.length+' 位用户 · '+rawPosts.length+' 条帖子）';
+
+  var aggrHtml=aggr.map(function(u,i){
+    var should=u.deep.length*2+u.basic.length;
+    var pending=should-u.disbursed;
+    var notes=u.low.length>0?'字数不足20':'';
+    var deepHtml=u.deep.map(function(s){return '<div>'+esc(s)+'</div>';}).join('');
+    var basicHtml=u.basic.map(function(s){return '<div>'+esc(s)+'</div>';}).join('');
+    var uid=esc(u.userId);
+    return '<tr>'
+      +'<td class="td-num">'+(i+1)+'</td>'
+      +'<td class="td-mono">'+uid+'</td>'
+      +'<td>'+esc(u.nickname)+'</td>'
+      +'<td class="td-posts td-deep">'+(deepHtml||'<span style="color:#d1d5db">—</span>')+'</td>'
+      +'<td class="td-posts td-basic">'+(basicHtml||'<span style="color:#d1d5db">—</span>')+'</td>'
+      +'<td class="td-amount td-pending" id="pend-'+uid+'">'+(pending>0?pending:'')+'</td>'
+      +'<td class="td-amount"><input class="dis-input" type="number" min="0" value="'+(u.disbursed||'')+'" data-uid="'+uid+'" data-should="'+should+'" oninput="onDisInput(this)"></td>'
+      +'<td class="td-note">'+esc(notes)+'</td>'
+      +'</tr>';
+  }).join('');
+  document.getElementById('aggrBody').innerHTML=aggrHtml;
+}
+
+function onDisInput(inp) {
+  var uid=inp.dataset.uid;
+  var should=Number(inp.dataset.should);
+  disbursedMap[uid]=Number(inp.value)||0;
+  var pending=should-disbursedMap[uid];
+  var cell=document.getElementById('pend-'+uid);
+  if(cell) cell.textContent=pending>0?pending:'';
+}
+
+function removePost(i) { rawPosts.splice(i,1); renderAll(); }
+function toggleRaw() {
+  var p=document.getElementById('rawPanel');
+  var open=p.classList.toggle('open');
+  document.getElementById('rawArrow').textContent=open?'▼':'▶';
+}
+
+// ── Push / add ──
+function pushPost(d) { rawPosts.push(d); renderAll(); }
+
+function addManualEntry() {
+  var url=document.getElementById('pasteUrl').value.trim();
+  var html=document.getElementById('pasteHtml').value.trim();
+  var msg=document.getElementById('manualMsg');
+  if(!url){msg.textContent='请填写帖子 URL';msg.style.color='#dc2626';return;}
+  if(!html){msg.textContent='请粘贴页面源码';msg.style.color='#dc2626';return;}
+  try{
+    var d=extractData(html,url);
+    pushPost(d);
+    msg.textContent='✓ 已添加 Post '+d.postId+' · '+d.wordCount+' words'+(d.date?' · '+d.date:'');
+    msg.style.color='#16a34a';
+    document.getElementById('pasteUrl').value='';
+    document.getElementById('pasteHtml').value='';
+  }catch(e){msg.textContent='解析失败: '+e.message;msg.style.color='#dc2626';}
+}
+
+// ── Auto-fetch ──
+function logLine(id,msg,type){
+  var el=document.getElementById(id); el.classList.add('open');
+  var d=document.createElement('div'); d.className='log-'+(type||'info'); d.textContent=msg;
+  el.appendChild(d); el.scrollTop=el.scrollHeight;
+}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+function fetchHtml(url){
+  function ft(u,ms){return new Promise(function(res,rej){var c=new AbortController(),t=setTimeout(function(){c.abort();rej(new Error('timeout'));},ms);fetch(u,{signal:c.signal}).then(function(r){clearTimeout(t);res(r);}).catch(function(e){clearTimeout(t);rej(e);});});}
+  return ft(url,8000).then(function(r){if(r.ok)return r.text();throw new Error('direct '+r.status);})
+    .catch(function(){return ft('https://api.allorigins.win/get?url='+encodeURIComponent(url),14000).then(function(r){return r.json();}).then(function(j){if(j&&j.contents)return j.contents;throw new Error('no contents');});})
+    .catch(function(){return ft('https://corsproxy.io/?'+encodeURIComponent(url),14000).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});});
+}
+async function runAutoExtract(){
+  var urls=document.getElementById('urlInput').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  if(!urls.length){alert('请输入至少一个 URL');return;}
+  var btn=document.getElementById('autoBtn');btn.disabled=true;
+  var log=document.getElementById('autoLog');log.innerHTML='';log.classList.remove('open');
+  for(var i=0;i<urls.length;i++){
+    var url=urls[i];
+    logLine('autoLog','['+(i+1)+'/'+urls.length+'] Fetching '+url);
+    try{
+      var html=await fetchHtml(url);
+      var d=extractData(html,url);
+      pushPost(d);
+      logLine('autoLog','['+(i+1)+'/'+urls.length+'] OK  '+d.postId+' · '+d.userId+' ('+(d.nickname||'?')+') · '+d.wordCount+'词','ok');
+    }catch(e){
+      logLine('autoLog','['+(i+1)+'/'+urls.length+'] ✗ '+e.message+' → 请用 Bookmarklet / Paste Source','err');
+    }
+    if(i<urls.length-1)await sleep(900);
+  }
+  btn.disabled=false;
+}
+
+// ── Copy ──
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function copyTable(){
+  var aggr=aggregate();
+  if(!aggr.length){alert('没有数据可复制');return;}
+  function cc(s){return String(s||'').replace(/[\t\r\n]/g,' ').trim();}
+  var H=['序号','用户ID','用户昵称','深度','基础','待发放金额','已发放金额（累计）','备注'];
+  // HTML table (Lark renders this as a real table)
+  var htm='<table><thead><tr>'+H.map(function(h){return '<th style="background:#f0f2f5;font-weight:600">'+h+'</th>';}).join('')+'</tr></thead><tbody>';
+  // Plain text fallback
+  var lines=[H.join('\t')];
+  aggr.forEach(function(u,i){
+    var should=u.deep.length*2+u.basic.length, pending=should-u.disbursed;
+    var pv=pending>0?String(pending):'', dv=u.disbursed?String(u.disbursed):'', note=u.low.length>0?'字数不足20':'';
+    htm+='<tr>'
+      +'<td>'+(i+1)+'</td>'
+      +'<td>'+esc(u.userId)+'</td>'
+      +'<td>'+esc(u.nickname)+'</td>'
+      +'<td>'+u.deep.map(esc).join('<br>')+'</td>'
+      +'<td>'+u.basic.map(esc).join('<br>')+'</td>'
+      +'<td style="text-align:center">'+pv+'</td>'
+      +'<td style="text-align:center">'+dv+'</td>'
+      +'<td>'+esc(note)+'</td>'
+      +'</tr>';
+    lines.push([i+1,cc(u.userId),cc(u.nickname),u.deep.map(cc).join('; '),u.basic.map(cc).join('; '),pv,dv,note].join('\t'));
+  });
+  htm+='</tbody></table>';
+  var txt=lines.join('\r\n');
+  var fb=document.getElementById('copyFeedback');
+  var done=function(){fb.textContent='✓ Copied';setTimeout(function(){fb.textContent='';},2500);};
+  if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){
+    navigator.clipboard.write([new ClipboardItem({
+      'text/html' :new Blob([htm],{type:'text/html'}),
+      'text/plain':new Blob([txt],{type:'text/plain'})
+    })]).then(done).catch(function(){
+      navigator.clipboard.writeText(txt).then(done).catch(function(){legacyCopy(txt,done);});
+    });
+  } else if(navigator.clipboard){
+    navigator.clipboard.writeText(txt).then(done).catch(function(){legacyCopy(txt,done);});
+  } else {
+    legacyCopy(txt,done);
+  }
+}
+function legacyCopy(text,cb){
+  var ta=Object.assign(document.createElement('textarea'),{value:text,style:'position:fixed;opacity:0;top:0;left:0'});
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');cb();}catch(e){}
+  document.body.removeChild(ta);
+}
+</script>
+</body>
+</html>
